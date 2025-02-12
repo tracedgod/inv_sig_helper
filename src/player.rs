@@ -189,10 +189,13 @@ pub async fn fetch_update(state: Arc<GlobalState>) -> Result<(), FetchUpdateStat
     //     .unwrap()
     //     .as_str();
 
+    let mut helper_object_body_regex_str = String::new();
+    helper_object_body_regex_str += "(var ";
     // Get the helper object
     if let Some(captures) = REGEX_HELPER_OBJ_NAME.captures(sig_function_body) {
         if let Some(match_) = captures.get(1) {
             let helper_object_name = match_.as_str();
+            helper_object_body_regex_str += helper_object_name;
         } else {
             error!("Unable to extract the helper object name");
             return Err(FetchUpdateStatus::NsigHelperExtractFailed);
@@ -200,10 +203,6 @@ pub async fn fetch_update(state: Arc<GlobalState>) -> Result<(), FetchUpdateStat
     } else {
         warn!("No match found for REGEX_HELPER_OBJ_NAME in sig_function_body");
     }
-
-    let mut helper_object_body_regex_str = String::new();
-    helper_object_body_regex_str += "(var ";
-    helper_object_body_regex_str += helper_object_name;
     helper_object_body_regex_str += "=\\{(?:.|\\n)+?\\}\\};)";
 
     let helper_object_body_regex = Regex::new(&helper_object_body_regex_str).unwrap();
