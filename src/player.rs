@@ -17,6 +17,7 @@ pub enum FetchUpdateStatus {
     CannotMatchPlayerID,
     CannotFetchPlayerJS,
     NsigRegexCompileFailed,
+    NsigBodyExtractFailed,
     NsigHelperExtractFailed,
     PlayerAlreadyUpdated,
 }
@@ -172,7 +173,10 @@ pub async fn fetch_update(state: Arc<GlobalState>) -> Result<(), FetchUpdateStat
     sig_function_body_regex_str += &sig_function_name.replace("$", "\\$");
     sig_function_body_regex_str += "=function\\([a-zA-Z0-9_]+\\)\\{.+?\\}";
 
+    debug!("sig_function_body_regex: {}", sig_function_body_regex_str);
+
     let sig_function_body_regex = Regex::new(&sig_function_body_regex_str).unwrap();
+
 
     let sig_function_body = sig_function_body_regex
         .captures(&player_javascript)
@@ -181,28 +185,24 @@ pub async fn fetch_update(state: Arc<GlobalState>) -> Result<(), FetchUpdateStat
         .unwrap()
         .as_str();
 
-    // Get the helper object
-    // let helper_object_name = REGEX_HELPER_OBJ_NAME
-    //     .captures(sig_function_body)
-    //     .unwrap()
-    //     .get(1)
-    //     .unwrap()
-    //     .as_str();
+    debug!("sig_function_body: {}", sig_function_body);
 
     let mut helper_object_body_regex_str = String::new();
     helper_object_body_regex_str += "(var ";
+
     // Get the helper object
     if let Some(captures) = REGEX_HELPER_OBJ_NAME.captures(sig_function_body) {
         if let Some(match_) = captures.get(1) {
             let helper_object_name = match_.as_str();
             helper_object_body_regex_str += helper_object_name;
         } else {
-            error!("Unable to extract the helper object name");
-            return Err(FetchUpdateStatus::NsigHelperExtractFailed);
+            warn!("Unable to extract the helper object name");
         }
     } else {
         warn!("No match found for REGEX_HELPER_OBJ_NAME in sig_function_body");
+        return Err(FetchUpdateStatus::NsigHelperExtractFailed);
     }
+
     helper_object_body_regex_str += "=\\{(?:.|\\n)+?\\}\\};)";
 
     let helper_object_body_regex = Regex::new(&helper_object_body_regex_str).unwrap();
