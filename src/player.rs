@@ -17,6 +17,7 @@ pub enum FetchUpdateStatus {
     CannotMatchPlayerID,
     CannotFetchPlayerJS,
     NsigRegexCompileFailed,
+    NsigHelperExtractFailed,
     PlayerAlreadyUpdated,
 }
 
@@ -181,12 +182,24 @@ pub async fn fetch_update(state: Arc<GlobalState>) -> Result<(), FetchUpdateStat
         .as_str();
 
     // Get the helper object
-    let helper_object_name = REGEX_HELPER_OBJ_NAME
-        .captures(sig_function_body)
-        .unwrap()
-        .get(1)
-        .unwrap()
-        .as_str();
+    // let helper_object_name = REGEX_HELPER_OBJ_NAME
+    //     .captures(sig_function_body)
+    //     .unwrap()
+    //     .get(1)
+    //     .unwrap()
+    //     .as_str();
+
+    // Get the helper object
+    if let Some(captures) = REGEX_HELPER_OBJ_NAME.captures(sig_function_body) {
+        if let Some(match_) = captures.get(1) {
+            let helper_object_name = match_.as_str();
+        } else {
+            error!("Unable to extract the helper object name");
+            return Err(FetchUpdateStatus::NsigHelperExtractFailed);
+        }
+    } else {
+        warn!("No match found for REGEX_HELPER_OBJ_NAME in sig_function_body");
+    }
 
     let mut helper_object_body_regex_str = String::new();
     helper_object_body_regex_str += "(var ";
